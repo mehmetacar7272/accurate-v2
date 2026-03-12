@@ -1,0 +1,103 @@
+accurate-v2/
+├─ backend/
+│  ├─ app/
+│  │  ├─ main.py
+│  │  ├─ core/
+│  │  │  ├─ config.py
+│  │  │  ├─ security.py
+│  │  │  ├─ database.py
+│  │  │  ├─ permissions.py
+│  │  │  ├─ logging.py
+│  │  │  └─ exceptions.py
+│  │  ├─ models/
+│  │  ├─ schemas/
+│  │  ├─ services/
+│  │  ├─ repositories/
+│  │  ├─ api/
+│  │  │  ├─ deps.py
+│  │  │  └─ v1/
+│  │  │     ├─ router.py
+│  │  │     ├─ auth.py
+│  │  │     ├─ dashboard.py
+│  │  │     ├─ customers.py
+│  │  │     ├─ personnel.py
+│  │  │     ├─ devices.py
+│  │  │     ├─ controlled_forms.py
+│  │  │     ├─ requests.py
+│  │  │     ├─ offers.py
+│  │  │     ├─ protocols.py
+│  │  │     ├─ work_orders.py
+│  │  │     ├─ workspace.py
+│  │  │     ├─ reports.py
+│  │  │     ├─ archive.py
+│  │  │     ├─ qms.py
+│  │  │     └─ admin_definitions.py
+│  │  ├─ definitions/
+│  │  │  ├─ form_templates/
+│  │  │  ├─ test_rules/
+│  │  │  ├─ report_templates/
+│  │  │  └─ revision_engine/
+│  │  ├─ workers/
+│  │  │  ├─ report_jobs.py
+│  │  │  ├─ reminders.py
+│  │  │  └─ sync_jobs.py
+│  │  └─ utils/
+│  ├─ migrations/
+│  ├─ tests/
+│  └─ requirements.txt
+│
+├─ frontend/
+│  ├─ public/
+│  ├─ src/
+│  │  ├─ app/
+│  │  │  ├─ router/
+│  │  │  ├─ store/
+│  │  │  └─ providers/
+│  │  ├─ api/
+│  │  ├─ components/
+│  │  │  ├─ layout/
+│  │  │  ├─ tables/
+│  │  │  ├─ forms/
+│  │  │  ├─ badges/
+│  │  │  ├─ dialogs/
+│  │  │  └─ offline/
+│  │  ├─ modules/
+│  │  │  ├─ dashboard/
+│  │  │  ├─ customers/
+│  │  │  ├─ personnel/
+│  │  │  ├─ devices/
+│  │  │  ├─ controlledForms/
+│  │  │  ├─ requests/
+│  │  │  ├─ offers/
+│  │  │  ├─ protocols/
+│  │  │  ├─ workOrders/
+│  │  │  ├─ workspace/
+│  │  │  ├─ reports/
+│  │  │  ├─ archive/
+│  │  │  └─ qms/
+│  │  ├─ hooks/
+│  │  ├─ lib/
+│  │  ├─ types/
+│  │  ├─ offline/
+│  │  │  ├─ indexeddb.ts
+│  │  │  ├─ syncQueue.ts
+│  │  │  ├─ conflictResolver.ts
+│  │  │  └─ cacheManifest.ts
+│  │  ├─ styles/
+│  │  ├─ main.tsx
+│  │  └─ vite-env.d.ts
+│  ├─ package.json
+│  └─ vite.config.ts
+│
+├─ docs/
+│  ├─ architecture/
+│  ├─ modules/
+│  ├─ procedures/
+│  └─ revision-history/
+│
+├─ deployment/
+│  ├─ docker/
+│  ├─ nginx/
+│  └─ scripts/
+│
+└─ README.md
