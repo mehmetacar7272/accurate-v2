@@ -101,3 +101,119 @@ class OperationTaskLog(Base):
     action = Column(String(100), nullable=False)
     note = Column(Text, default="", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class InspectionType(Base):
+    __tablename__ = "inspection_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    category = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    version_no = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    test_links = relationship(
+        "InspectionTypeTest",
+        back_populates="inspection_type",
+        cascade="all, delete-orphan",
+    )
+
+
+class InspectionTest(Base):
+    __tablename__ = "inspection_tests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(100), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    short_name = Column(String(255), nullable=True)
+    description = Column(Text, default="", nullable=False)
+    unit_label = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    version_no = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    type_links = relationship(
+        "InspectionTypeTest",
+        back_populates="inspection_test",
+        cascade="all, delete-orphan",
+    )
+
+
+class InspectionTypeTest(Base):
+    __tablename__ = "inspection_type_tests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inspection_type_id = Column(
+        Integer,
+        ForeignKey("inspection_types.id"),
+        nullable=False,
+        index=True,
+    )
+    inspection_test_id = Column(
+        Integer,
+        ForeignKey("inspection_tests.id"),
+        nullable=False,
+        index=True,
+    )
+    is_required = Column(Boolean, default=False, nullable=False)
+    is_default_selected = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    display_name_override = Column(String(255), nullable=True)
+    notes = Column(Text, default="", nullable=False)
+    version_no = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    inspection_type = relationship("InspectionType", back_populates="test_links")
+    inspection_test = relationship("InspectionTest", back_populates="type_links")
+
+
+class DefinitionTextTemplate(Base):
+    __tablename__ = "definition_text_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_type = Column(String(100), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    body_text = Column(Text, default="", nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    version_no = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class DefinitionSnapshot(Base):
+    __tablename__ = "definition_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(String(50), nullable=False, index=True)
+    entity_id = Column(Integer, nullable=False, index=True)
+    definition_version_summary = Column(String(255), nullable=False, default="")
+    snapshot_json = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
