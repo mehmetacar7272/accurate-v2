@@ -163,46 +163,6 @@ def _safe_json_load(raw: str | None) -> dict:
         return {}
 
 
-
-def _offer_document_snapshot(offer: Offer) -> dict[str, Any]:
-    snapshot = _safe_json_load(offer.request_snapshot_json)
-    current = snapshot.get("offer_document")
-    if not isinstance(current, dict):
-        current = {}
-        snapshot["offer_document"] = current
-    return snapshot
-
-
-def _get_offer_discount_rate(offer: Offer) -> Decimal:
-    snapshot = _safe_json_load(offer.request_snapshot_json)
-    document = snapshot.get("offer_document") if isinstance(snapshot, dict) else {}
-    try:
-        return Decimal(str((document or {}).get("discount_rate") or 0)).quantize(Decimal("0.01"))
-    except Exception:
-        return Decimal("0.00")
-
-
-def _get_section_discount_rate(section: OfferSection) -> Decimal:
-    snapshot = _safe_json_load(section.section_snapshot_json)
-    try:
-        return Decimal(str((snapshot or {}).get("discount_rate") or 0)).quantize(Decimal("0.01"))
-    except Exception:
-        return Decimal("0.00")
-
-
-def _set_section_discount_rate(section: OfferSection, rate: Any) -> None:
-    snapshot = _safe_json_load(section.section_snapshot_json)
-    snapshot["discount_rate"] = float(_to_decimal(rate))
-    section.section_snapshot_json = json.dumps(snapshot, ensure_ascii=False)
-
-
-def _assert_offer_editable(offer: Offer) -> None:
-    _assert_offer_is_current(offer)
-    if offer.status == "APPROVED":
-        raise ValueError("Onaylı teklif üzerinde fiyat veya belge alanı revizesi yapılamaz")
-    if offer.status == "CANCELLED":
-        raise ValueError("İptal edilmiş teklif üzerinde işlem yapılamaz")
-
 def _build_summary_items(payload: dict) -> list[dict]:
     items: list[dict] = []
     if not isinstance(payload, dict):
@@ -270,29 +230,18 @@ def _build_sections_from_snapshot(snapshot: dict) -> list[dict]:
 
 def _recalculate_offer_totals(db, offer: Offer) -> None:
     subtotal = Decimal("0.00")
-    section_discount_total = Decimal("0.00")
-    extra_day_fee_total = Decimal("0.00")
-    extra_day_fee = _to_decimal(getattr(offer, 'extra_day_fee', 0))
     for section in offer.sections:
         section.subtotal = _to_decimal(section.service_price) + _to_decimal(section.travel_price) + _to_decimal(section.report_price)
-        section_discount_rate = _get_section_discount_rate(section)
-        section_discount_amount = (section.subtotal * section_discount_rate / Decimal('100')).quantize(Decimal('0.01'))
         section.updated_at = datetime.utcnow()
         subtotal += _to_decimal(section.subtotal)
-        section_discount_total += section_discount_amount
-        extra_day_fee_total += _to_decimal(section.estimated_days or 0) * extra_day_fee
     vat_rate = _vat_rate_value(offer.vat_rate)
-    offer_discount_rate = _get_offer_discount_rate(offer)
-    pre_offer_discount_base = max(subtotal - section_discount_total, Decimal('0.00')) + extra_day_fee_total
-    offer_discount_amount = (pre_offer_discount_base * offer_discount_rate / Decimal('100')).quantize(Decimal('0.01'))
-    vat_base = max(pre_offer_discount_base - offer_discount_amount, Decimal('0.00'))
-    vat_amount = (vat_base * vat_rate / Decimal('100')).quantize(Decimal('0.01'))
+    vat_amount = (subtotal * vat_rate / Decimal('100')).quantize(Decimal('0.01'))
     offer.subtotal_amount = subtotal
-    offer.grand_total = vat_base
+    offer.grand_total = subtotal
     offer.vat_amount = vat_amount
-    offer.grand_total_with_vat = (vat_base + vat_amount).quantize(Decimal('0.01'))
+    offer.grand_total_with_vat = (subtotal + vat_amount).quantize(Decimal('0.01'))
     offer.currency = _currency_code(getattr(offer, 'currency', 'TRY'))
-    offer.extra_day_fee = extra_day_fee
+    offer.extra_day_fee = _to_decimal(getattr(offer, 'extra_day_fee', 0))
     offer.updated_at = datetime.utcnow()
     db.flush()
 
@@ -312,7 +261,6 @@ def _serialize_section(section: OfferSection) -> dict:
         "report_price": _money(section.report_price),
         "subtotal": _money(section.subtotal),
         "estimated_days": section.estimated_days,
-        "discount_rate": float(_get_section_discount_rate(section)),
         "tests": [
             {
                 "id": test.id,
@@ -353,9 +301,7 @@ def _serialize_offer(item: Offer) -> dict:
         "extra_day_fee": _money(getattr(item, 'extra_day_fee', 0)),
         "authorized_person_name": getattr(item, 'authorized_person_name', None),
         "approved_offer_file_name": getattr(item, 'approved_offer_file_name', None),
-        "approved_offer_file_path": getattr(item, 'approved_offer_file_path', None),
         "has_approved_offer_file": bool(getattr(item, 'approved_offer_file_path', None)),
-        "discount_rate": float(_get_offer_discount_rate(item)),
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
     }
@@ -639,20 +585,10 @@ def get_offer_document_context(offer_id: int) -> dict[str, Any]:
         summary_rows: list[dict[str, Any]] = []
         currency = _currency_code(getattr(offer, 'currency', 'TRY'))
         vat_rate = _vat_rate_value(getattr(offer, 'vat_rate', 0))
-        offer_discount_rate = _get_offer_discount_rate(offer)
-        total_subtotal = Decimal('0.00')
-        total_section_discount = Decimal('0.00')
-        extra_day_fee_total = Decimal('0.00')
         for section in offer.sections:
             subtotal = _to_decimal(section.subtotal)
-            section_discount_rate = _get_section_discount_rate(section)
-            section_discount_amount = (subtotal * section_discount_rate / Decimal('100')).quantize(Decimal('0.01'))
-            net_subtotal = max(subtotal - section_discount_amount, Decimal('0.00'))
-            section_vat = (net_subtotal * vat_rate / Decimal('100')).quantize(Decimal('0.01'))
-            section_total = (net_subtotal + section_vat).quantize(Decimal('0.01'))
-            total_subtotal += subtotal
-            total_section_discount += section_discount_amount
-            extra_day_fee_total += _to_decimal(section.estimated_days or 0) * _to_decimal(getattr(offer, 'extra_day_fee', 0))
+            section_vat = (subtotal * vat_rate / Decimal('100')).quantize(Decimal('0.01'))
+            section_total = (subtotal + section_vat).quantize(Decimal('0.01'))
             serialized = _serialize_section(section)
             summary_items = serialized.get('summary_items') or _build_summary_items(serialized.get('payload') or {})
             doc_section = {
@@ -662,9 +598,6 @@ def get_offer_document_context(offer_id: int) -> dict[str, Any]:
                 'travel_price': _money(section.travel_price),
                 'report_price': _money(section.report_price),
                 'subtotal': _money(subtotal),
-                'discount_rate': float(section_discount_rate),
-                'discount_amount': _money(section_discount_amount),
-                'net_subtotal': _money(net_subtotal),
                 'vat_rate': float(vat_rate),
                 'vat_rate_label': f"%{vat_rate:.2f}".replace('.00', ''),
                 'vat_amount': _money(section_vat),
@@ -682,7 +615,6 @@ def get_offer_document_context(offer_id: int) -> dict[str, Any]:
                 'inspection_type_name': section.inspection_type_name,
                 'estimated_days': section.estimated_days,
                 'subtotal': float(subtotal),
-                'discount_amount': float(section_discount_amount),
                 'vat_rate_label': doc_section['vat_rate_label'],
                 'vat_amount': float(section_vat),
                 'grand_total': float(section_total),
@@ -699,12 +631,6 @@ def get_offer_document_context(offer_id: int) -> dict[str, Any]:
             {'label': settings['OFFER_REFERENCE_LINK_1_LABEL'], 'url': settings['OFFER_REFERENCE_LINK_1_URL']},
             {'label': settings['OFFER_REFERENCE_LINK_2_LABEL'], 'url': settings['OFFER_REFERENCE_LINK_2_URL']},
         ]
-
-        offer_discount_base = max(total_subtotal - total_section_discount + extra_day_fee_total, Decimal('0.00'))
-        offer_discount_amount = (offer_discount_base * offer_discount_rate / Decimal('100')).quantize(Decimal('0.01'))
-        vat_base = max(offer_discount_base - offer_discount_amount, Decimal('0.00'))
-        total_vat_amount = (vat_base * vat_rate / Decimal('100')).quantize(Decimal('0.01'))
-        total_grand = (vat_base + total_vat_amount).quantize(Decimal('0.01'))
 
         revision_logs = [
             {
@@ -725,14 +651,9 @@ def get_offer_document_context(offer_id: int) -> dict[str, Any]:
             'request_contact': request_contact,
             'currency': currency,
             'vat_rate': float(vat_rate),
-            'vat_amount': _money(total_vat_amount),
-            'grand_total': _money(vat_base),
-            'grand_total_with_vat': _money(total_grand),
-            'subtotal_before_discount': _money(total_subtotal + extra_day_fee_total),
-            'section_discount_total': _money(total_section_discount),
-            'offer_discount_rate': float(offer_discount_rate),
-            'offer_discount_amount': _money(offer_discount_amount),
-            'discount_amount': _money(total_section_discount + offer_discount_amount),
+            'vat_amount': _money(getattr(offer, 'vat_amount', 0)),
+            'grand_total': _money(getattr(offer, 'grand_total', 0)),
+            'grand_total_with_vat': _money(getattr(offer, 'grand_total_with_vat', getattr(offer, 'grand_total', 0))),
             'estimated_days': getattr(offer, 'estimated_days', None),
             'extra_day_fee': _money(getattr(offer, 'extra_day_fee', 0)),
             'authorized_person_name': getattr(offer, 'authorized_person_name', None) or '',
@@ -790,7 +711,6 @@ def update_offer_section_pricing(offer_id: int, section_id: int, payload: dict) 
         if not offer:
             raise ValueError("Teklif bulunamadı")
         _ensure_sections(db, offer)
-        _assert_offer_editable(offer)
         section = db.query(OfferSection).filter(OfferSection.id == section_id, OfferSection.offer_id == offer_id).first()
         if not section:
             raise ValueError("Teklif bölümü bulunamadı")
@@ -799,7 +719,6 @@ def update_offer_section_pricing(offer_id: int, section_id: int, payload: dict) 
         section.report_price = _to_decimal(payload.get("report_price"))
         estimated_days = payload.get('estimated_days')
         section.estimated_days = int(estimated_days) if str(estimated_days or '').strip() else None
-        _set_section_discount_rate(section, payload.get('discount_rate'))
         _recalculate_offer_totals(db, offer)
         db.commit()
         db.refresh(section)
@@ -820,17 +739,11 @@ def update_offer_document_fields(offer_id: int, payload: dict) -> dict:
         offer = db.query(Offer).filter(Offer.id == offer_id).first()
         if not offer:
             raise ValueError('Teklif bulunamadı')
-        _assert_offer_editable(offer)
         offer.currency = _currency_code(payload.get('currency') or offer.currency or 'EUR')
         offer.vat_rate = _vat_rate_value(payload.get('vat_rate'))
         offer.extra_day_fee = _to_decimal(payload.get('extra_day_fee'))
         authorized_person_name = str(payload.get('authorized_person_name') or '').strip()
         offer.authorized_person_name = authorized_person_name or None
-        snapshot = _offer_document_snapshot(offer)
-        document = snapshot.get('offer_document') or {}
-        document['discount_rate'] = float(_to_decimal(payload.get('discount_rate')))
-        snapshot['offer_document'] = document
-        offer.request_snapshot_json = json.dumps(snapshot, ensure_ascii=False)
         _recalculate_offer_totals(db, offer)
         db.commit()
         db.refresh(offer)
@@ -978,7 +891,6 @@ def upload_approved_offer_file(offer_id: int, upload_file) -> dict:
         if not offer:
             raise ValueError('Teklif bulunamadı')
         suffix = Path(upload_file.filename or '').suffix.lower()
-        _assert_offer_editable(offer)
         if suffix not in {'.pdf', '.jpg', '.jpeg', '.png'}:
             raise ValueError('Sadece PDF veya görsel dosyası yüklenebilir')
         APPROVED_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -989,6 +901,63 @@ def upload_approved_offer_file(offer_id: int, upload_file) -> dict:
         offer.approved_offer_file_path = str(path)
         offer.approved_offer_file_name = upload_file.filename or filename
         offer.approved_offer_uploaded_at = datetime.utcnow()
+        offer.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(offer)
+        return _serialize_offer(offer)
+    finally:
+        db.close()
+
+
+def get_approved_offer_file_path(offer_id: int) -> tuple[Path, str]:
+    db = SessionLocal()
+    try:
+        offer = db.query(Offer).filter(Offer.id == offer_id).first()
+        if not offer:
+            raise ValueError('Teklif bulunamadı')
+        raw_path = getattr(offer, 'approved_offer_file_path', None)
+        if not raw_path:
+            raise ValueError('Onaylı teklif dosyası bulunamadı')
+        path = Path(raw_path)
+        if not path.exists():
+            raise ValueError('Onaylı teklif dosyası bulunamadı')
+        filename = getattr(offer, 'approved_offer_file_name', None) or path.name
+        return path, filename
+    finally:
+        db.close()
+
+
+def delete_approved_offer_file(offer_id: int) -> dict:
+    db = SessionLocal()
+    try:
+        offer = db.query(Offer).filter(Offer.id == offer_id).first()
+        if not offer:
+            raise ValueError('Teklif bulunamadı')
+        raw_path = getattr(offer, 'approved_offer_file_path', None)
+        if not raw_path:
+            raise ValueError('Silinecek onaylı teklif dosyası bulunamadı')
+        path = Path(raw_path)
+        if path.exists():
+            path.unlink()
+        offer.approved_offer_file_path = None
+        offer.approved_offer_file_name = None
+        offer.approved_offer_uploaded_at = None
+        offer.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(offer)
+        return _serialize_offer(offer)
+    finally:
+        db.close()
+
+
+def archive_cancelled_offer(offer_id: int) -> dict:
+    db = SessionLocal()
+    try:
+        offer = _get_offer_or_raise(db, offer_id)
+        _assert_offer_is_current(offer)
+        if offer.status != 'CANCELLED':
+            raise ValueError('Sadece iptal edilmiş teklifler pasife alınabilir')
+        offer.is_current = False
         offer.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(offer)

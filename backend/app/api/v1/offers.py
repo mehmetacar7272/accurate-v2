@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.modules.document.offer_renderer import generate_offer_docx, generate_offer_pdf
-from app.modules.offer.services import approve_offer, cancel_approved_offer, get_offer_detail, get_offer_document_context, list_approved_offers, list_offer_revision_children, list_offers, update_offer_document_fields, update_offer_section_pricing, upload_approved_offer_file
+from app.modules.offer.services import approve_offer, archive_cancelled_offer, cancel_approved_offer, delete_approved_offer_file, get_approved_offer_file_path, get_offer_detail, get_offer_document_context, list_approved_offers, list_offer_revision_children, list_offers, update_offer_document_fields, update_offer_section_pricing, upload_approved_offer_file
 from app.modules.protocol.services import ensure_protocol_drafts_for_offer, list_protocol_drafts_for_offer
 
 router = APIRouter(prefix="/offers")
@@ -14,14 +14,12 @@ class OfferSectionPricingPayload(BaseModel):
     travel_price: float = 0
     report_price: float = 0
     estimated_days: int | None = None
-    discount_rate: float = 0
 
 
 class OfferDocumentPayload(BaseModel):
     currency: str = "EUR"
     vat_rate: float = 20
     extra_day_fee: float = 500
-    discount_rate: float = 0
     authorized_person_name: str | None = "Mehmet ACAR"
 
 
@@ -144,24 +142,35 @@ def post_offer_approved_file(offer_id: int, file: UploadFile = File(...)):
         raise HTTPException(status_code=status_code, detail=message) from exc
 
 
+
+
 @router.get("/{offer_id}/approved-file")
 def get_offer_approved_file(offer_id: int):
     try:
-        item = get_offer_detail(offer_id)
-        path = item.get("approved_offer_file_path")
-        if not path:
-            raise ValueError("Onaylı teklif dosyası bulunamadı")
-        file_path = path
+        path, filename = get_approved_offer_file_path(offer_id)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 404 if "bulunamadı" in message.lower() else 400
+        raise HTTPException(status_code=status_code, detail=message) from exc
+    suffix = path.suffix.lower()
+    media_type = "application/pdf" if suffix == ".pdf" else None
+    return FileResponse(path=str(path), filename=filename, media_type=media_type)
+
+
+@router.delete("/{offer_id}/approved-file")
+def delete_offer_approved_file(offer_id: int):
+    try:
+        return delete_approved_offer_file(offer_id)
     except ValueError as exc:
         message = str(exc)
         status_code = 404 if "bulunamadı" in message.lower() else 400
         raise HTTPException(status_code=status_code, detail=message) from exc
 
-    lower_name = str(item.get("approved_offer_file_name") or file_path).lower()
-    media_type = "application/pdf"
-    if lower_name.endswith(".jpg") or lower_name.endswith(".jpeg"):
-        media_type = "image/jpeg"
-    elif lower_name.endswith(".png"):
-        media_type = "image/png"
-
-    return FileResponse(path=file_path, filename=item.get("approved_offer_file_name") or None, media_type=media_type)
+@router.post("/{offer_id}/archive")
+def post_offer_archive(offer_id: int):
+    try:
+        return archive_cancelled_offer(offer_id)
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 404 if "bulunamadı" in message.lower() else 400
+        raise HTTPException(status_code=status_code, detail=message) from exc

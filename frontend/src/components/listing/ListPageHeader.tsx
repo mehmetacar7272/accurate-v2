@@ -94,7 +94,7 @@ export function thStyle(index: number, length: number): CSSProperties {
   return {
     color: '#fff',
     textAlign: 'left',
-    padding: '14px 12px',
+    padding: '12px 6px',
     fontSize: 14,
     borderTopLeftRadius: index === 0 ? 14 : 0,
     borderTopRightRadius: index === length - 1 ? 14 : 0,
@@ -103,7 +103,7 @@ export function thStyle(index: number, length: number): CSSProperties {
 }
 
 export const cellStyle: CSSProperties = {
-  padding: '12px 12px',
+  padding: '12px 6px',
   verticalAlign: 'middle',
   borderTop: '1px solid #e5e7eb',
 }

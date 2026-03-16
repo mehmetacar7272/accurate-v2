@@ -94,6 +94,7 @@ export default function OfferDetailPage() {
   const [activeSectionId, setActiveSectionId] = useState<number | null>(null)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null)
   const [loadingPdfPreview, setLoadingPdfPreview] = useState(false)
+  const [deletingApprovedFile, setDeletingApprovedFile] = useState(false)
 
   useEffect(() => {
     if (!toast.text) return
@@ -237,6 +238,23 @@ export default function OfferDetailPage() {
     }
   }
 
+  const deleteApprovedFile = async () => {
+    setDeletingApprovedFile(true)
+    try {
+      await apiClient.delete(`/offers/${offerId}/approved-file`)
+      if (pdfPreviewUrl) {
+        window.URL.revokeObjectURL(pdfPreviewUrl)
+        setPdfPreviewUrl(null)
+      }
+      setToast({ text: 'Onaylı teklif dosyası silindi.', kind: 'success' })
+      await load()
+    } catch (err: any) {
+      setToast({ text: err?.response?.data?.detail || 'Onaylı teklif dosyası silinemedi.', kind: 'error' })
+    } finally {
+      setDeletingApprovedFile(false)
+    }
+  }
+
   const downloadFile = async (kind: 'docx' | 'pdf') => {
     setDownloadingType(kind)
     try {
@@ -284,7 +302,7 @@ export default function OfferDetailPage() {
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
-      {readonly ? <div style={{ ...card, borderColor: '#dbeafe', background: '#eff6ff', color: '#1d4ed8' }}>{detail.status === 'CANCELLED' ? 'Bu teklif iptal edilmiştir. Ana listeye dönmez ve bu kayıttan yeni protokol oluşturulamaz.' : 'Bu teklif eski revizyondur. Düzenleme yerine yalnızca görüntüleme yapılmalıdır.'}</div> : null}
+      {readonly ? <div style={{ ...card, borderColor: '#dbeafe', background: '#eff6ff', color: '#1d4ed8' }}>{detail.status === 'CANCELLED' ? 'Bu teklif iptal edilmiştir. Ana listeye dönmez ve bu kayıttan yeni protokol oluşturulamaz.' : 'Bu teklif onaylıdır. Düzenleme yerine yalnızca görüntüleme yapılabilir.'}</div> : null}
       <div style={{ ...card, display: 'grid', gap: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div>
@@ -298,11 +316,11 @@ export default function OfferDetailPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(200px, 1fr))', gap: 16 }}>
-          <div style={softCard}><div style={{ color: '#5a7396' }}>Adres</div><div style={{ marginTop: 10, fontWeight: 800, fontSize: 18, color: '#081734' }}>{detail.inspection_location_address || '-'}</div></div>
-          <div style={softCard}><div style={{ color: '#5a7396' }}>Bölüm Sayısı</div><div style={{ marginTop: 10, fontWeight: 900, fontSize: 32, color: '#081734' }}>{detail.section_count}</div></div>
-          <div style={softCard}><div style={{ color: '#5a7396' }}>İskonto</div><div style={{ marginTop: 10, fontWeight: 900, fontSize: 24, color: '#081734' }}>{documentFields.discount_rate || '0'}%</div><div style={{ marginTop: 6, color: '#64748b' }}>{money(discountAmount, detail.currency || 'EUR')}</div></div>
-          <div style={{ ...softCard, background: '#fff7f7', borderColor: '#f8d2d2' }}><div style={{ color: '#b42318' }}>KDV Dahil Toplam</div><div style={{ marginTop: 10, fontWeight: 900, fontSize: 24, color: '#7a150f' }}>{money(grandTotalWithVat, detail.currency || 'EUR')}</div></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 2fr) minmax(170px, 1fr) minmax(170px, 1fr) minmax(240px, 1.35fr)', gap: 16, alignItems: 'stretch' }}>
+          <div style={{ ...softCard, minHeight: 170 }}><div style={{ color: '#5a7396' }}>Adres</div><div style={{ marginTop: 10, fontWeight: 800, fontSize: 18, lineHeight: 1.45, color: '#081734', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{detail.inspection_location_address || '-'}</div></div>
+          <div style={{ ...softCard, minHeight: 170 }}><div style={{ color: '#5a7396' }}>Bölüm Sayısı</div><div style={{ marginTop: 10, fontWeight: 900, fontSize: 32, color: '#081734' }}>{detail.section_count}</div></div>
+          <div style={{ ...softCard, minHeight: 170 }}><div style={{ color: '#5a7396' }}>İskonto</div><div style={{ marginTop: 10, fontWeight: 900, fontSize: 24, color: '#081734' }}>{documentFields.discount_rate || '0'}%</div><div style={{ marginTop: 6, color: '#64748b' }}>{money(discountAmount, detail.currency || 'EUR')}</div></div>
+          <div style={{ ...softCard, minHeight: 170, background: '#fff7f7', borderColor: '#f8d2d2' }}><div style={{ color: '#b42318' }}>KDV Dahil Toplam</div><div style={{ marginTop: 10, fontWeight: 900, fontSize: 24, color: '#7a150f' }}>{money(grandTotalWithVat, detail.currency || 'EUR')}</div></div>
         </div>
       </div>
 
@@ -311,7 +329,7 @@ export default function OfferDetailPage() {
           style={{
             position: 'fixed',
             right: 24,
-            bottom: 24,
+            top: 24,
             zIndex: 1200,
             minWidth: 320,
             maxWidth: 460,
@@ -358,7 +376,7 @@ export default function OfferDetailPage() {
           </div>
         </div>
         <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(event) => void uploadApprovedFile(event.target.files?.[0])} />
-        {detail.has_approved_offer_file ? <div style={{ ...softCard, padding: 14, color: '#166534', background: '#f0fdf4', borderColor: '#bbf7d0', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div>Yüklü onaylı teklif dosyası: {detail.approved_offer_file_name}</div><button style={ghostButton} onClick={() => void previewApprovedFile()} disabled={loadingPdfPreview}>{loadingPdfPreview ? 'Açılıyor...' : 'Dosyayı Görüntüle'}</button></div> : null}
+        {detail.has_approved_offer_file ? <div style={{ ...softCard, padding: 14, color: '#166534', background: '#f0fdf4', borderColor: '#bbf7d0', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div>Yüklü onaylı teklif dosyası: {detail.approved_offer_file_name}</div><div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}><button style={ghostButton} onClick={() => void previewApprovedFile()} disabled={loadingPdfPreview}>{loadingPdfPreview ? 'Açılıyor...' : 'Dosyayı Görüntüle'}</button><button style={linkButton} onClick={() => void deleteApprovedFile()} disabled={deletingApprovedFile}>{deletingApprovedFile ? 'Siliniyor...' : 'Sil'}</button></div></div> : null}
       </div>
 
       <div style={{ ...card, display: 'grid', gap: 14 }}>

@@ -135,7 +135,7 @@ function formatDate(value?:string | null) {
 }
 
 function inspectionTypeBadges(items:string[]) {
-  return { visible: items.slice(0, 3), hidden: items.slice(3) }
+  return { visible: items.slice(0, 1), hidden: items.slice(1) }
 }
 
 function inspectionTypeColor(index:number) {
@@ -752,20 +752,31 @@ export default function RequestListPage() {
           onClear={() => setListQuery('')}
         />
         <div style={standardTableWrap}>
-          <table style={{ ...standardTableStyle, minWidth: 1160 }}>
+          <table style={{ ...standardTableStyle, minWidth: 1130, tableLayout:'fixed' }}>
+            <colgroup>
+              <col style={{ width: 36 }} />
+              <col style={{ width: 136 }} />
+              <col style={{ width: '7cm' }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 180 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 104 }} />
+            </colgroup>
             <thead>
               <tr style={darkHeaderRowStyle}>
-                {['No', 'Talep No', 'Müşteri', 'Talep Tarihi', 'Muayene Türleri', 'Talep Durumu', 'Değerlendirme', 'Revizyon', 'Güncel', 'İşlem'].map((h, index, arr) => <th key={h} style={thStyle(index, arr.length)}>{h}</th>)}
+                {['No', 'Talep No', 'Müşteri', 'Talep Tarihi', 'Muayene Türleri', 'Talep Durumu', 'Değerlendirme', 'Revizyon', 'İşlem'].map((h, index, arr) => <th key={h} style={thStyle(index, arr.length)}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {filteredListRows.map((row, index) => (
                 <tr key={row.id} onClick={() => loadDetail(row.id)} style={{ cursor:'pointer', background: row.id === selectedId ? '#fff7ed' : index % 2 ? '#fff' : '#fcfcfd' }}>
-                  <td style={{ ...cellStyle, whiteSpace:'nowrap', width:48 }}>{index + 1}</td>
-                  <td style={{ ...cellStyle, fontWeight:800, width:128, whiteSpace:'nowrap' }}>{row.request_no}</td>
-                  <td style={{ ...cellStyle, width:260 }}><span style={ellipsisTextStyle}>{row.customer_name}</span></td>
-                  <td style={{ ...cellStyle, whiteSpace:'nowrap', width:106 }}>{formatDate((row as any).created_at)}</td>
-                  <td style={{ ...cellStyle, width:176 }}>
+                  <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{index + 1}</td>
+                  <td style={{ ...cellStyle, fontWeight:800, whiteSpace:'nowrap' }}>{row.request_no}</td>
+                  <td style={{ ...cellStyle,  }}><span style={{ ...ellipsisTextStyle, display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',  }}>{row.customer_name}</span></td>
+                  <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{formatDate((row as any).created_at)}</td>
+                  <td style={{ ...cellStyle,  }}>
                     {(() => {
                       const parts = inspectionTypeBadges(row.inspection_types)
                       const expanded = !!expandedTypeRows[row.id]
@@ -785,21 +796,20 @@ export default function RequestListPage() {
                       )
                     })()}
                   </td>
-                  <td style={{ ...cellStyle, width:108 }}>{mapStatus(row.request_status)}</td>
-                  <td style={{ ...cellStyle, width:108 }}>{mapStatus(row.evaluation_status)}</td>
-                  <td style={{ ...cellStyle, width:108 }}>
+                  <td style={{ ...cellStyle,  }}>{mapStatus(row.request_status)}</td>
+                  <td style={{ ...cellStyle,  }}>{mapStatus(row.evaluation_status)}</td>
+                  <td style={{ ...cellStyle,  }}>
                     {mapStatus(row.revision_status)}
                   </td>
-                  <td style={{ ...cellStyle, width:96 }}>{row.is_current ? 'Güncel' : 'Taslak/Geçmiş'}</td>
-                  <td style={{ ...cellStyle, width:150 }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                      <button type="button" style={{ ...btnLight, padding:'8px 12px', fontSize:13 }} onClick={() => handleEditFromList(row.id)}>Düzenle</button>
-                      <button type="button" style={{ ...btnDark, padding:'8px 12px', fontSize:13 }} onClick={() => handlePassiveRequest(row.id)}>Pasife Al</button>
+                  <td style={{ ...cellStyle,  }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:6, alignItems:'flex-start' }}>
+                      <button type="button" style={{ ...btnLight, padding:'6px 7px', fontSize:13, minWidth:80 }} onClick={() => handleEditFromList(row.id)}>Düzenle</button>
+                      <button type="button" style={{ ...btnDark, padding:'6px 7px', fontSize:13, minWidth:80 }} onClick={() => handlePassiveRequest(row.id)}>Pasife Al</button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {!filteredListRows.length ? <tr><td colSpan={10} style={{ ...cellStyle, padding:18, textAlign:'center', color:'#64748b' }}>Henüz talep yok</td></tr> : null}
+              {!filteredListRows.length ? <tr><td colSpan={9} style={{ ...cellStyle, padding:18, textAlign:'center', color:'#64748b' }}>Henüz talep yok</td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -812,7 +822,7 @@ export default function RequestListPage() {
               <div style={{ fontSize:12, color:'#6b7280', fontWeight:700 }}>SEÇİLİ TALEP</div>
               <div style={{ fontSize:34, fontWeight:800, color:'#0f172a' }}>{detail.request.request_no}</div>
               <div style={{ color:'#475569', fontSize:18 }}>{detail.customer_ref?.customer_name || detail.request.customer_name}</div>
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'flex-start' }}>
                 {mapStatus(detail.request.request_status)}
                 {mapStatus(detail.request.evaluation_status)}
               </div>
@@ -889,7 +899,7 @@ export default function RequestListPage() {
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, flexWrap:'wrap' }}>
             <h2 style={{ margin:0 }}>Muayene Türleri</h2>
             {canEditLines ? (
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'flex-start' }}>
                 <select style={{ ...input, minWidth:220 }} value={lineAddId} onChange={(e)=>setLineAddId(e.target.value)}>
                   <option value="">Muayene türü ekle</option>
                   {addableDefinitions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}

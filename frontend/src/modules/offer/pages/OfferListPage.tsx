@@ -34,11 +34,11 @@ const primaryButton: CSSProperties = {
   borderRadius: 10,
   background: '#991b1b',
   color: '#fff',
-  padding: '8px 12px',
+  padding: '7px 10px',
   fontWeight: 800,
   cursor: 'pointer',
-  minWidth: 96,
-  height: 42,
+  minWidth: 92,
+  height: 40,
 }
 
 const ghostButton: CSSProperties = {
@@ -46,19 +46,19 @@ const ghostButton: CSSProperties = {
   borderRadius: 10,
   background: '#fff',
   color: '#111827',
-  padding: '8px 12px',
+  padding: '7px 10px',
   fontWeight: 800,
   cursor: 'pointer',
-  minWidth: 96,
-  height: 42,
+  minWidth: 82,
+  height: 36,
 }
 
 const revisionButton: CSSProperties = {
   ...ghostButton,
-  padding: '6px 10px',
-  minWidth: 112,
-  height: 42,
-  lineHeight: 1.15,
+  padding: '6px 8px',
+  minWidth: 92,
+  height: 38,
+  lineHeight: 1.1,
   fontSize: 13,
 }
 
@@ -137,6 +137,16 @@ export default function OfferListPage() {
 
         <div style={standardTableWrap}>
           <table style={{ ...standardTableStyle, minWidth: 1120, tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 110 }} />
+              <col />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 60 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 96 }} />
+            </colgroup>
             <thead>
               <tr style={darkHeaderRowStyle}>
                 {headers.map((header, index) => (
@@ -151,19 +161,19 @@ export default function OfferListPage() {
                 return (
                   <Fragment key={row.id}>
                     <tr style={{ background: index % 2 ? '#fff' : '#fcfcfd' }}>
-                      <td style={{ ...cellStyle, fontWeight: 900, color: '#081734', whiteSpace: 'nowrap', width: 150 }}>{row.offer_no}</td>
-                      <td style={{ ...cellStyle, width: 410 }}>
-                        <span style={{ ...ellipsisTextStyle, maxWidth: 392, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.customer_name}</span>
+                      <td style={{ ...cellStyle, fontWeight: 900, color: '#081734', whiteSpace: 'nowrap', width: 116 }}>{row.offer_no}</td>
+                      <td style={{ ...cellStyle, width: 560 }}>
+                        <span style={{ ...ellipsisTextStyle,  display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.customer_name}</span>
                       </td>
-                      <td style={{ ...cellStyle, color: '#475569', width: 165 }}>
-                        <span style={{ ...ellipsisTextStyle, maxWidth: 150, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.source_request_no || '-'}</span>
+                      <td style={{ ...cellStyle, color: '#475569', width: 116 }}>
+                        <span style={{ ...ellipsisTextStyle,  display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.source_request_no || '-'}</span>
                       </td>
-                      <td style={{ ...cellStyle, width: 118 }}><StatusBadge label={row.status} /></td>
-                      <td style={{ ...cellStyle, whiteSpace: 'nowrap', width: 96 }}>Rev. {row.revision_no}</td>
-                      <td style={{ ...cellStyle, fontWeight: 700, width: 72 }}>{row.section_count || 0}</td>
-                      <td style={{ ...cellStyle, fontWeight: 900, color: '#7a150f', whiteSpace: 'nowrap', width: 138 }}>{money(row.grand_total, row.currency || 'EUR')}</td>
-                      <td style={{ ...cellStyle, width: 140 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+                      <td style={{ ...cellStyle, width: 90 }}><StatusBadge label={row.status} /></td>
+                      <td style={{ ...cellStyle, whiteSpace: 'nowrap', width: 64 }}>Rev. {row.revision_no}</td>
+                      <td style={{ ...cellStyle, fontWeight: 700, width: 38 }}>{row.section_count || 0}</td>
+                      <td style={{ ...cellStyle, fontWeight: 900, color: '#7a150f', whiteSpace: 'nowrap', width: 108 }}>{money(row.grand_total, row.currency || 'EUR')}</td>
+                      <td style={{ ...cellStyle, width: 88 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
                           <button style={primaryButton} onClick={() => navigate(`/offers/${row.id}`)}>Detay</button>
                           <button style={revisionButton} onClick={() => void toggleRevisions(row.id)}>
                             {expanded ? 'Gizle' : 'Eski Revizyonlar'}
@@ -177,12 +187,12 @@ export default function OfferListPage() {
                           {loadingRevisionId === row.id ? (
                             <div style={{ color: '#64748b' }}>Revizyon geçmişi yükleniyor...</div>
                           ) : children.length ? (
-                            <div style={{ display: 'grid', gap: 10 }}>
+                            <div style={{ display: 'grid', gap: 6 }}>
                               {children.map((child) => (
                                 <div key={child.id} style={{ border: '1px solid #dbe3f0', background: '#fff', borderRadius: 16, padding: 14, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                                   <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
                                     <div style={{ fontWeight: 900, color: '#0f172a' }}>{child.offer_no} · Rev. {child.revision_no}</div>
-                                    <div style={{ color: '#64748b', fontSize: 14, ...ellipsisTextStyle, maxWidth: 420 }}>{child.customer_name} · {money(child.grand_total, child.currency || 'EUR')}</div>
+                                    <div style={{ color: '#64748b', fontSize: 14, ...ellipsisTextStyle,  }}>{child.customer_name} · {money(child.grand_total, child.currency || 'EUR')}</div>
                                   </div>
                                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                     <StatusBadge label={child.status} />
